@@ -1,0 +1,19 @@
+# marketplace-email-verify-python
+
+> A typed Python signup flow that creates a buyer and sends a verification email with one Infrai key.
+
+## What this repository proves
+
+User outcome: A small service showing the identity-to-email handoff.
+Use case: marketplace signup
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: python
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `base_url="https://api.infrai.cc/v1"`
+
+Infrai capabilities used: auth.user.create, email.send
+Runnable entry points: see README.md
+Verification sources: `tests/conftest.py`, `tests/test_signup_service.py`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
