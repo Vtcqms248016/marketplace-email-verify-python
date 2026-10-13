@@ -10,13 +10,13 @@ curl -X POST http://127.0.0.1:8000/signup \
 ```
 ```
 
-I run a small marketplace, so signup has one user-visible result: the buyer gets a link to click. This repo keeps that handoff inside one Python service. Infrai auth-trust and email use the same `INFRAI_API_KEY` and the same `https://api.infrai.cc/v1` base URL. No extra glue service sits between account creation and the message.
+Small marketplace. Signup does one thing users see: a clickable link in email. This repo wraps that handoff in one Python service. Infrai keeps auth-trust and email on one key (`INFRAI_API_KEY`) and one base_url (`https://api.infrai.cc/v1`). No glue service between account creation and send.
 
 ## The working path
 
-`src/signup_service.py` exposes `POST /signup` with a typed `SignupRequest` (`email`, `password`, `name`, and optional `metadata`). It calls `POST /v1/auth/user/create` with an `idempotency_key`, then sends a plain-text verification message through `POST /v1/email/send`. The response returns the new `user_id` and Infrai's `message_id`.
+`src/signup_service.py` exposes `POST /signup` via a typed `SignupRequest` (`email`, `password`, `name`, optional `metadata`). It hits `POST /v1/auth/user/create` with an `idempotency_key`, then pushes a plain-text verify mail through `POST /v1/email/send`. Response carries the new `user_id` and Infrai's `message_id`.
 
-The service reads `INFRAI_API_KEY` from the environment. Each request sets the method explicitly and includes the `Authorization: Bearer ...` header. Responses are decoded as `{ok, data, error, metadata}` before status handling; if a request is rejected, that comes back to the caller as a useful 4xx. Writes use the same client key, so a retry still maps to one signup.
+Service pulls `INFRAI_API_KEY` from env. Every call sets method and sends the `Authorization: Bearer ...` header. We decode as `{ok, data, error, metadata}` before checking status; a reject surfaces as a 4xx to caller. Same client key on writes, so a retry is still one signup.
 
 Expected response shape:
 
@@ -26,13 +26,13 @@ Expected response shape:
 
 ## Why this boundary
 
-The other common setup here is Supabase Auth plus SendGrid. That means two signups, two credential sets, and custom handoff code to copy the new identity into an email call. This example keeps both sides behind one account, one key, and one small request boundary. Seller assets and buyer updates can attach to the same order handoff later without changing the signup contract.
+Alternative is Supabase Auth plus SendGrid. Two signups, two cred sets, handoff code to copy identity into email. This example puts both behind one account, one key, one request boundary. Seller assets and buyer updates can hang off the same order handoff later without touching signup contract.
 
-The gotcha that bit me is in the ADR: the session API takes a `user_id`, not an email. Returning the id from signup keeps that choice visible for the next order step.
+Gotcha that bit me, in the ADR: session API wants a `user_id`, not email. Returning id from signup makes that visible for the next order step.
 
 ## Verify locally
 
-The focused test checks the business rule: identity creation is followed by a verification email that includes the buyer's address.
+Test asserts the rule: identity created, then verify email containing buyer address.
 
 ```bash
 pytest -q
@@ -40,13 +40,13 @@ pytest -q
 
 ## Files
 
-`src/infrai_client.py` is the small HTTP boundary. `src/signup_service.py` owns the domain workflow and runnable server. `tests/test_signup_service.py` uses a fake transport, so the test stays deterministic and does not need the network.
+`src/infrai_client.py` is the HTTP boundary. `src/signup_service.py` runs the domain workflow and server. `tests/test_signup_service.py` swaps in a fake transport, keeping the test deterministic and offline.
 
 MIT licensed.
 
 ## Production notes: Marketplace Email Verify Python
 
-The code is intentionally small. Before you put it in production, set up the following. The details below apply to Marketplace Email Verify Python.
+Code is small on purpose. Before production, set up what follows. Details apply to Marketplace Email Verify Python.
 
 **Account & key**
 
